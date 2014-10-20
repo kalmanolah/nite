@@ -1,0 +1,12 @@
+###################################
+# KEEP THIS OUT OF YOUR VCS / SCM #
+###################################
+nite:
+    queue:
+        amqp:
+            exchange_name: exchange_name
+            host:          127.0.0.1:5672
+            user:          user_name
+            password:      secret_password
+            virtual_host:  vhost_path
+            ssl:           False

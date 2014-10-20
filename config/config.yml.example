@@ -1,0 +1,12 @@
+nite:
+    event:
+        #worker_processes: <CPUS>
+    logger:
+        #log_format:       [{1}][{2}] {3}
+        #date_format:      '%Y-%m-%d %H:%M:%S'
+        #min_loglevel:     INFO
+    queue:
+        #type:             amqp
+        #node_identifier:  <FQDN>
+        amqp:
+            #connect_timeout:  5

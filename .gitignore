@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.idea/
+.ropeproject/
+config/*
+!config/*.example
+dist/
+build/
+MANIFEST
+*.egg-info/
+modules/*
+!modules/stdcmd
+!modules/.gitkeep
