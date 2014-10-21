@@ -4,15 +4,19 @@ import os
 import signal
 import sys
 import time
+import logging
 from select import select
 from ballercfg import ConfigurationManager
 
 from nite.util import ensure_dir, set_working_directory
 from nite.queue import create_connector
-from nite.logging import LogLevel, Logger
+from nite.logging import configure_logging
 from nite.event import EventManager
 from nite.worker import WorkerManager
 from nite.module import ModuleManager
+
+
+logger = logging.getLogger(__name__)
 
 
 class NITECore:
@@ -23,11 +27,6 @@ class NITECore:
     def configuration(self):
         """Return configuration."""
         return self._configuration
-
-    @property
-    def logger(self):
-        """Return logger."""
-        return self._logger
 
     @property
     def text_parser(self):
@@ -76,9 +75,8 @@ class NITECore:
 
     def start(self):
         """Start NITE."""
+        logger.info('Initializing NITE [debug=%s, daemonize=%s]', self.debug, self.daemonize)
         self._stopping = False
-        self._logger = Logger()
-        self.logger.info('Initializing NITE [debug=%s, daemonize=%s]' % (self.debug, self.daemonize))
 
         # Register exit handler and set working directory
         atexit.register(self.stop)
@@ -92,12 +90,7 @@ class NITECore:
         ])
 
         # Properly set up the logger using values from the configuration
-        min_loglevel = LogLevel.DEBUG if self.debug else self.configuration.get('nite.logger.min_loglevel')
-        self.logger.initialize(
-            min_loglevel,
-            self.configuration.get('nite.logger.date_format'),
-            self.configuration.get('nite.logger.log_format')
-        )
+        configure_logging(self.configuration.get('nite.logging'), debug=self.debug)
 
         # Initialize queue connection
         self._queue_connector = create_connector(self)
@@ -116,7 +109,7 @@ class NITECore:
         # Start worker processes
         self._worker_manager = WorkerManager(self)
 
-        self.logger.info('NITE initialized successfully')
+        logger.info('NITE initialized successfully')
 
         # If we're not daemonized, take commands from standard input
         if self.daemonized:
@@ -126,8 +119,8 @@ class NITECore:
 
     def stop(self):
         """Stop NITE."""
+        logger.info('Stopping NITE')
         self._stopping = True
-        self.logger.info('Stopping NITE')
 
         # Unregister exit handler (so we don't stop twice)
         atexit.unregister(self.stop)
@@ -137,7 +130,7 @@ class NITECore:
         self.module_manager.unload_all()
         self.queue_connector.close()
 
-        self.logger.info('NITE stopped successfully')
+        logger.info('NITE stopped successfully')
 
     def infinite_loop(self):
         """Loop for the sake of looping, so the process doesn't die."""
@@ -187,7 +180,7 @@ class NITECore:
 
         pid = os.getpid()
 
-        print('Sending daemon to background, PID: %s' % pid)
+        logger.info('Sending daemon to background, PID: %s' % pid)
         self._daemonized = True
 
         # Write the PIDfile and register a function to clean it up
@@ -202,8 +195,8 @@ class NITECore:
         sys.stdout.flush()
         sys.stderr.flush()
 
-        stdout = open('/var/log/nite.log', 'a+')
-        stderr = open('/var/log/nite.log', 'a+')
+        stdout = open('/dev/null', 'a+')
+        stderr = open('/dev/null', 'a+')
         stdin = open('/dev/null', 'r')
 
         os.dup2(stdout.fileno(), sys.stdout.fileno())
@@ -218,6 +211,7 @@ class NITECore:
         """Handle a signal sent to this process."""
         self.stop()
 
+        # SIGHUP qualifies as a restart
         if sig is signal.SIGHUP:
             self.start()
 
@@ -233,6 +227,7 @@ class NITECore:
         self._daemonize = daemonize
         self._daemonized = False
 
+        configure_logging(debug=debug)
         self.register_signal_handlers()
 
         # Daemonize if needed

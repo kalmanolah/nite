@@ -1,5 +1,6 @@
 """This module contains the `AmqpQueueConnector` class."""
 import msgpack
+import logging
 import socket
 import queue
 import re
@@ -10,6 +11,9 @@ from multiprocessing import Value, Queue, Process
 from nite.event import EventDemographic
 from nite.util import ignore_signals, get_module_attr
 from nite.queue.connector import AbstractQueueConnector
+
+
+logger = logging.getLogger(__name__)
 
 
 class AmqpQueueConnector(AbstractQueueConnector):
@@ -69,7 +73,7 @@ class AmqpQueueConnector(AbstractQueueConnector):
         self.processes_should_terminate.value = True
         self.producer_process.join()
         self.consumer_process.join()
-        self.NITE.logger.debug('AMQP connector shut down successfully')
+        logger.debug('AMQP connector shut down successfully')
 
     def create_connection(self):
         """Create and return a connection to the queue."""
@@ -303,7 +307,7 @@ class AmqpQueueConnector(AbstractQueueConnector):
         self._consumer_queue = Queue()
         self._ack_queue = Queue()
 
-        self.NITE.logger.debug('AMQP queue connector initialized')
+        logger.debug('AMQP queue connector initialized')
 
     def start(self):
         """Spawn and start the producer and consumer processes."""
@@ -323,7 +327,7 @@ class AmqpQueueConnector(AbstractQueueConnector):
 
         """
         self.bound_event_names.append(event)
-        self.NITE.logger.debug('Event hook registered for for event "%s"' % event)
+        logger.debug('Event hook registered for event "%s"' % event)
 
     def on_consume(self, message):
         """Handle a consumed message by turning it into an event and pushing it onto the consumer queue."""

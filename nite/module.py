@@ -2,8 +2,11 @@
 import glob
 import os
 import sys
+import logging
 from ballercfg import ConfigurationManager
-from nite.logging import LogLevel
+
+
+logger = logging.getLogger(__name__)
 
 
 class AbstractModule:
@@ -35,10 +38,6 @@ class AbstractModule:
 
         """
         raise NotImplementedError('All derivatives of `AbstractModule` must implement a `stop` method.')
-
-    def log(self, string, level=LogLevel.INFO):
-        """Log a string with a loglevel."""
-        self.NITE.logger.log("[%s] %s" % (self.metadata.get('name'), string), level)
 
     def __init__(self, NITE, metadata):
         """Construct an instance of this module with some metadata."""
@@ -89,7 +88,7 @@ class ModuleManager:
         dirs = []
 
         for path in paths:
-            self.NITE.logger.debug('Loading modules matching "%s"' % path)
+            logger.debug('Loading modules matching "%s"', path)
             entries = glob.glob(path)
             for entry in entries:
                 if os.path.isdir(entry):
@@ -116,7 +115,7 @@ class ModuleManager:
         if module_identifier in self.modules:
             return
 
-        self.NITE.logger.debug('Loading module "%s"' % module_identifier)
+        logger.debug('Loading module "%s"', module_identifier)
         metadata = self.module_metadata[module_identifier]
 
         # If the module has dependencies, try load those modules first.
@@ -143,7 +142,7 @@ class ModuleManager:
 
     def unload(self, module_identifier):
         """Unload a module by its identifier."""
-        self.NITE.logger.debug('Unloading module "%s"' % module_identifier)
+        logger.debug('Unloading module "%s"', module_identifier)
 
         del self.modules[module_identifier]
         self.modules.pop("", None)
@@ -169,17 +168,17 @@ class ModuleManager:
         """Start a module by its identifier."""
         module = self.modules[module_identifier]
 
-        self.NITE.logger.debug('Starting module "%s"' % module_identifier)
+        logger.debug('Starting module "%s"', module_identifier)
         module.start()
-        self.NITE.logger.debug('Module "%s" started' % module_identifier)
+        logger.debug('Module "%s" started', module_identifier)
 
     def stop(self, module_identifier):
         """Stop a module by its identifier."""
         module = self.modules[module_identifier]
 
-        self.NITE.logger.debug('Stopping module "%s"' % module_identifier)
+        logger.debug('Stopping module "%s"', module_identifier)
         module.stop()
-        self.NITE.logger.debug('Module "%s" stopped' % module_identifier)
+        logger.debug('Module "%s" stopped', module_identifier)
 
     def start_all(self):
         """Start all modules."""
@@ -200,4 +199,4 @@ class ModuleManager:
         self._module_modules = {}
         self.refresh_module_list()
 
-        self.NITE.logger.debug('Module manager initialized')
+        logger.debug('Module manager initialized')

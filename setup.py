@@ -40,6 +40,7 @@ setup(
         'msgpack-python',
         'click',
         'ballercfg',
+        'colorlog'
     ],
     dependency_links=[
         'git+https://github.com/kalmanolah/ballercfg.git',

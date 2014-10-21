@@ -20,6 +20,7 @@ standards.
 * click
 * setproctitle
 * msgpack-python
+* colorlog
 * [ballercfg](https://github.com/kalmanolah/ballercfg)
 
 ##TODO

@@ -1,8 +1,12 @@
 """Event module."""
 import uuid
 import inspect
+import logging
 from datetime import datetime
 from nite.util import enum
+
+
+logger = logging.getLogger(__name__)
 
 
 """
@@ -84,11 +88,8 @@ class EventManager:
 
         # Add the listener to the collection of listeners
         self.event_listeners[event_name][priority].append(listener)
-
-        self.NITE.logger.debug('Registered a new event listener for "%s" with priority "%s"' % (
-            event_name,
-            EventPriority.reverse_mapping[priority]
-        ))
+        logger.debug('Registered a new event listener for "%s" with priority "%s"',
+                      event_name, EventPriority.reverse_mapping[priority])
 
     def trigger_event(self, event, demographic=EventDemographic.GLOBAL_SINGLE, reply_to_event=None):
         """Trigger an event of type `event` against the chosen demographic.
@@ -133,7 +134,7 @@ class EventManager:
         """Initialize the event manager."""
         self._NITE = NITE
         self._event_listeners = {}
-        self.NITE.logger.debug('Event manager initialized')
+        logger.debug('Event manager initialized')
 
 
 class BaseEvent:

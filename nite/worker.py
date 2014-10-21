@@ -1,7 +1,11 @@
 """Worker module."""
+import logging
 import multiprocessing
 from setproctitle import setproctitle
 from nite.util import ignore_signals
+
+
+logger = logging.getLogger(__name__)
 
 
 class Worker(multiprocessing.Process):
@@ -90,7 +94,7 @@ class WorkerManager:
             process.start()
             self.processes.append(process)
 
-        self.NITE.logger.info('%s worker process(es) started' % worker_count)
+        logger.info('%s worker process(es) started', worker_count)
 
     def close(self):
         """Shut down the worker manager."""
@@ -105,4 +109,4 @@ class WorkerManager:
         """Instantiate the worker manager."""
         self._NITE = NITE
         self.initialize()
-        self.NITE.logger.debug('Worker manager initialized')
+        logging.debug('Worker manager initialized')
