@@ -158,6 +158,8 @@ class NITECore:
         from nite.command import CommandEvent
 
         while not self.options['stopping']:
+            has_input = False
+
             try:
                 has_input, _, _ = select([sys.stdin], [], [], 1)
             except InterruptedError:  # noqa

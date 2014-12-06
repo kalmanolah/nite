@@ -1,7 +1,6 @@
 """Util module."""
 import os
 import errno
-import signal
 
 
 def get_module_attr(module_name, attr_name):
@@ -32,12 +31,3 @@ def ensure_dir(dir_name):
         if err.errno != errno.EEXIST:
             raise
     return
-
-
-def ignore_signals():
-    """Help worker processes ignore useless signals.
-
-    This helps prevent worker processes getting killed by anyone but the master process.
-
-    """
-    signal.signal(signal.SIGINT, signal.SIG_IGN)

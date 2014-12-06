@@ -281,7 +281,7 @@ class AmqpQueueConnector(AbstractQueueConnector):
         # Recreate the event with the received data
         event = Event.load(data['data'])
 
-        event._source = message.properties['reply_to'].replace('node.', '')
+        event._source = message.properties['reply_to']
         event._reply_to_uuid = message.properties['correlation_id'] if 'correlation_id' in message.properties else None
 
         # Have event handled by event manager

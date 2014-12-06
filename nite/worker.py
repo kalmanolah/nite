@@ -1,8 +1,8 @@
 """Worker module."""
 import logging
 import multiprocessing
+import signal
 from setproctitle import setproctitle
-from nite.util import ignore_signals
 
 
 logger = logging.getLogger(__name__)
@@ -41,7 +41,7 @@ class Worker(multiprocessing.Process):
     def run(self):
         """Main worker function of worker process."""
         # Worker processes should ignore certain signals
-        ignore_signals()
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
 
         # Set process title (for top, ps and the like)
         setproctitle(self.name)
@@ -112,7 +112,7 @@ class WorkerManager:
             process = Worker(
                 queue=self.queue,
                 terminate=self.terminate,
-                name='Worker Process #%i' % i,
+                name='NITE Worker Process #%i' % i,
                 daemon=True
             )
 
