@@ -4,12 +4,12 @@ import atexit
 import os
 import signal
 import sys
+import errno
 import time
 from logging import getLogger
 from select import select
 from ballercfg import ConfigurationManager
 
-from nite.util import ensure_dir
 from nite.queue import create_connector
 from nite.logging import configure_logging
 from nite.event import EventManager
@@ -198,11 +198,18 @@ class NITECore:
 
         pid = os.getpid()
 
-        logger.info('Sending daemon to background, PID: %s' % pid)
+        print('Sending daemon to background, PID: %s' % pid)
 
         # Write the PIDfile and register a function to clean it up
         self._pid_file_path = '/tmp/nite/daemon.pid'
-        ensure_dir(os.path.dirname(self._pid_file_path))
+
+        try:
+            os.makedirs(os.path.dirname(self._pid_file_path))
+        except OSError as err:
+            if err.errno != errno.EEXIST:
+                raise
+        return
+
         atexit.register(self.delete_pid_file)
         if os.path.exists(self._pid_file_path):
             self.delete_pid_file()
@@ -245,6 +252,10 @@ class NITECore:
         # Set default options
         self.options = options
 
+        # Daemonize if needed
+        if self.options['daemonize']:
+            self.daemonize_process()
+
         # Apply default logging configuration
         configure_logging(debug=self.options['debug'])
 
@@ -253,11 +264,6 @@ class NITECore:
 
         # Register signal handlers
         self.register_signal_handlers()
-        #atexit.register(self.stop)
-
-        # Daemonize if needed
-        if self.options['daemonize']:
-            self.daemonize_process()
 
         # Start application
         self.start()

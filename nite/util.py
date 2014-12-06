@@ -1,6 +1,4 @@
 """Util module."""
-import os
-import errno
 
 
 def get_module_attr(module_name, attr_name):
@@ -17,17 +15,3 @@ def instantiate(module_name, class_name, *args, **kwargs):
     class_ = get_module_attr(module_name, class_name)
     # Instantiate the class with our args and return the instance
     return class_(*args, **kwargs)
-
-
-def ensure_dir(dir_name):
-    """Ensure that a directory exists.
-
-    Taken from: http://stackoverflow.com/a/21349806
-
-    """
-    try:
-        os.makedirs(dir_name)
-    except OSError as err:
-        if err.errno != errno.EEXIST:
-            raise
-    return
