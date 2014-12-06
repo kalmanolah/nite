@@ -54,37 +54,67 @@ class ModuleManager:
         """Return NITE."""
         return self._NITE
 
+    @NITE.setter
+    def NITE(self, value):
+        """Set NITE."""
+        self._NITE = value
+
     @property
     def modules(self):
         """Return modules."""
         return self._modules
+
+    @modules.setter
+    def modules(self, value):
+        """Set modules."""
+        self._modules = value
 
     @property
     def module_identifiers(self):
         """Return module identifiers."""
         return self._module_identifiers
 
+    @module_identifiers.setter
+    def module_identifiers(self, value):
+        """Set module identifiers."""
+        self._module_identifiers = value
+
     @property
     def module_metadata(self):
         """Return module metadata."""
         return self._module_metadata
+
+    @module_metadata.setter
+    def module_metadata(self, value):
+        """Set module metadata."""
+        self._module_metadata = value
 
     @property
     def module_paths(self):
         """Return module paths."""
         return self._module_paths
 
+    @module_paths.setter
+    def module_paths(self, value):
+        """Set module paths."""
+        self._module_paths = value
+
     @property
     def module_modules(self):
         """Return module modules."""
         return self._module_modules
 
+    @module_modules.setter
+    def module_modules(self, value):
+        """Set module modules."""
+        self._module_modules = value
+
     def refresh_module_list(self):
         """Refresh module list and metadata."""
         paths = ['modules/*', os.path.expanduser('~') + '/.nite/modules/*', '/etc/nite/modules/*']
-        self._module_identifiers = []
-        self._module_metadata = {}
-        self._module_paths = {}
+        self.module_identifiers = []
+        self.module_metadata = {}
+        self.module_paths = {}
         dirs = []
 
         for path in paths:
@@ -108,7 +138,7 @@ class ModuleManager:
             self.module_metadata[identifier] = metadata
             self.module_paths[identifier] = source_path
 
-    def load(self, module_identifier):
+    def load_single(self, module_identifier):
         """Load a module by its identifier."""
         # If this module already exists in self.modules, it does not
         # need to be loaded.
@@ -121,7 +151,7 @@ class ModuleManager:
         # If the module has dependencies, try load those modules first.
         if metadata.get('dependencies'):
             for dependency in metadata.get('dependencies'):
-                self.load(dependency)
+                self.load_single(dependency)
 
         # Add the module's src/ folder to python's PYTHONPATH.
         sys.path.insert(0, '%s/%s' % (os.getcwd(), self.module_paths[module_identifier]))
@@ -140,7 +170,7 @@ class ModuleManager:
         instance = class_(self.NITE, metadata)
         self.modules[module_identifier] = instance
 
-    def unload(self, module_identifier):
+    def unload_single(self, module_identifier):
         """Unload a module by its identifier."""
         logger.debug('Unloading module "%s"', module_identifier)
 
@@ -154,17 +184,17 @@ class ModuleManager:
         self.module_modules.pop("", None)
         self.module_modules.pop(None, None)
 
-    def load_all(self):
+    def load(self):
         """Load all modules."""
         for module in self.module_identifiers:
-            self.load(module)
+            self.load_single(module)
 
-    def unload_all(self):
+    def unload(self):
         """Unload all modules."""
         for module in self.module_identifiers:
-            self.unload(module)
+            self.unload_single(module)
 
-    def start(self, module_identifier):
+    def start_single(self, module_identifier):
         """Start a module by its identifier."""
         module = self.modules[module_identifier]
 
@@ -172,7 +202,7 @@ class ModuleManager:
         module.start()
         logger.debug('Module "%s" started', module_identifier)
 
-    def stop(self, module_identifier):
+    def stop_single(self, module_identifier):
         """Stop a module by its identifier."""
         module = self.modules[module_identifier]
 
@@ -180,23 +210,27 @@ class ModuleManager:
         module.stop()
         logger.debug('Module "%s" stopped', module_identifier)
 
-    def start_all(self):
+    def start(self):
         """Start all modules."""
-        for module in self.module_identifiers:
-            self.start(module)
+        self.load()
 
-    def stop_all(self):
+        for module in self.module_identifiers:
+            self.start_single(module)
+
+    def stop(self):
         """Stop all modules."""
         for module in self.module_identifiers:
-            self.stop(module)
+            self.stop_single(module)
+
+        self.unload()
 
     def __init__(self, NITE):
-        """Initialize module manager."""
-        self._NITE = NITE
+        """Constructor."""
+        self.NITE = NITE
 
         # Initialize module variables.
-        self._modules = {}
-        self._module_modules = {}
+        self.modules = {}
+        self.module_modules = {}
         self.refresh_module_list()
 
         logger.debug('Module manager initialized')

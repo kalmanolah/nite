@@ -13,26 +13,30 @@ class Worker(multiprocessing.Process):
     """Worker process class."""
 
     @property
-    def NITE(self):
-        """Return NITE."""
-        return self._NITE
-
-    @property
     def queue(self):
-        """Return queue."""
+        """Return queue manager."""
         return self._queue
 
-    @property
-    def process_should_terminate(self):
-        """Return whether the worker process should terminate."""
-        return self._process_should_terminate
+    @queue.setter
+    def queue(self, value):
+        """Set queue manager."""
+        self._queue = value
 
-    def __init__(self, NITE, queue, process_should_terminate, name, daemon):
+    @property
+    def terminate(self):
+        """Return whether process should terminate."""
+        return self._terminate
+
+    @terminate.setter
+    def terminate(self, value):
+        """Set whether process should terminate."""
+        self._terminate = value
+
+    def __init__(self, queue, terminate, name, daemon):
         """Instantiate the worker process."""
-        super(Worker, self).__init__(name=name, daemon=daemon)
-        self._NITE = NITE
-        self._queue = queue
-        self._process_should_terminate = process_should_terminate
+        super(self.__class__, self).__init__(name=name, daemon=daemon)
+        self.queue = queue
+        self.terminate = terminate
 
     def run(self):
         """Main worker function of worker process."""
@@ -42,10 +46,16 @@ class Worker(multiprocessing.Process):
         # Set process title (for top, ps and the like)
         setproctitle(self.name)
 
+        # Start queue connector
+        self.queue.start()
+
         # While the process doesn't have to terminate
-        while not self.process_should_terminate.value:
-            # Fetch and handle events
-            self.NITE.queue_connector.fetch_events(self.process_should_terminate)
+        while not self.terminate.value:
+            # Fetch events
+            self.queue.fetch()
+
+        # Stop queue connector
+        self.queue.stop()
 
 
 class WorkerManager:
@@ -53,60 +63,75 @@ class WorkerManager:
     """This class manages worker processes."""
 
     @property
-    def NITE(self):
-        """Return NITE."""
-        return self._NITE
+    def queue(self):
+        """Return queue manager."""
+        return self._queue
+
+    @queue.setter
+    def queue(self, value):
+        """Set queue manager."""
+        self._queue = value
+
+    @property
+    def worker_count(self):
+        """Return worker count."""
+        return self._worker_count
+
+    @worker_count.setter
+    def worker_count(self, value):
+        """Set worker count."""
+        self._worker_count = value
 
     @property
     def processes(self):
         """Return processes."""
         return self._processes
 
-    @property
-    def queue(self):
-        """Return queue."""
-        return self._queue
+    @processes.setter
+    def processes(self, value):
+        """Set processes."""
+        self._processes = value
 
     @property
-    def processes_should_terminate(self):
-        """Return whether or not processes should terminate."""
-        return self._processes_should_terminate
+    def terminate(self):
+        """Return whether process should terminate."""
+        return self._terminate
 
-    def initialize(self):
+    @terminate.setter
+    def terminate(self, value):
+        """Set whether process should terminate."""
+        self._terminate = value
+
+    def start(self):
         """Initialize the worker manager."""
-        self._processes = []
-        self._processes_should_terminate = multiprocessing.Value('b', False)
-        self._queue = multiprocessing.Queue()
-
-        # Determine correct worker process count
-        worker_count = self.NITE.configuration.get('nite.event.worker_processes', multiprocessing.cpu_count())
+        self.processes = []
+        self.terminate = multiprocessing.Value('b', False)
 
         # Start spawning individual processes
-        for i in range(0, worker_count):
+        for i in range(0, self.worker_count):
             process = Worker(
-                NITE=self.NITE,
                 queue=self.queue,
-                process_should_terminate=self.processes_should_terminate,
-                name='NITE Worker Process #%i' % i,
+                terminate=self.terminate,
+                name='Worker Process #%i' % i,
                 daemon=True
             )
 
             process.start()
             self.processes.append(process)
 
-        logger.info('%s worker process(es) started', worker_count)
+        logger.info('%s worker process(es) started', self.worker_count)
 
-    def close(self):
+    def stop(self):
         """Shut down the worker manager."""
         # Tell worker processes that we want them to terminate.
-        self._processes_should_terminate.value = True
+        self.terminate.value = True
 
         # Actually start terminating and joining processes
         for process in self.processes:
             process.join()
 
-    def __init__(self, NITE):
+    def __init__(self, queue, worker_count=None):
         """Instantiate the worker manager."""
-        self._NITE = NITE
-        self.initialize()
+        self.queue = queue
+        self.worker_count = worker_count if worker_count else multiprocessing.cpu_count()
         logging.debug('Worker manager initialized')

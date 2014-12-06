@@ -2,39 +2,31 @@
 import uuid
 import inspect
 import logging
+from enum import Enum
 from datetime import datetime
-from nite.util import enum
 
 
 logger = logging.getLogger(__name__)
 
 
-"""
-Event demographic.
+class EventDemographic(Enum):
 
-Enum for determining which nodes will receive a published event.
+    """Enum for determining which nodes will receive a published event."""
 
-"""
-EventDemographic = enum(
-    'LOCAL',
-    'GLOBAL_SINGLE',
-    'GLOBAL_ALL'
-)
+    LOCAL = 1
+    GLOBAL_SINGLE = 2
+    GLOBAL_ALL = 3
 
 
-"""
-Event priority.
+class EventPriority(Enum):
 
-Enum for determining in what order event listeners are executed.
+    """Enum for determining in what order event listeners are executed."""
 
-"""
-EventPriority = enum(
-    'HIGHEST',
-    'HIGH',
-    'MEDIUM',
-    'LOW',
-    'LOWEST'
-)
+    HIGHEST = 1
+    HIGH = 2
+    MEDIUM = 3
+    LOW = 4
+    LOWEST = 5
 
 
 class EventManager:
@@ -42,25 +34,35 @@ class EventManager:
     """This class manages event dispatching and handling."""
 
     @property
-    def NITE(self):
-        """Return NITE."""
-        return self._NITE
+    def handlers(self):
+        """Return event handlers."""
+        return self._handlers
+
+    @handlers.setter
+    def handlers(self, value):
+        """Set event handlers."""
+        self._handlers = value
 
     @property
-    def event_listeners(self):
-        """Return event listeners."""
-        return self._event_listeners
+    def queue(self):
+        """Return queue manager."""
+        return self._queue
 
-    def register_event_listener(self, event, listener, priority=None):
-        """Register a listener for an event with a certain priority.
+    @queue.setter
+    def queue(self, value):
+        """Set queue manager."""
+        self._queue = value
+
+    def register(self, event, handler, priority=None):
+        """Register a handler for an event with a certain priority.
 
         If the `event` passed is a class, the class name and module name
-        are used as the name of the event to register an event listener
+        are used as the name of the event to register an event handler
         for. If `event`is not a class however (for instance: a string),
         the value itself will be used as the event name.
 
-        The `listener` should be a reference to a function or method to
-        execute during the handling of an event. This listener will be
+        The `handler` should be a reference to a function or method to
+        execute during the handling of an event. This handler will be
         called with a single parameter, namely the reconstructed event.
 
         `priority` should be one of the values of `EventPriority`.
@@ -74,24 +76,20 @@ class EventManager:
             priority = EventPriority.MEDIUM
 
         # If no listeners for this event exist yet, populate the dictionary
-        if event_name not in self.event_listeners:
-            self.event_listeners[event_name] = {
-                EventPriority.HIGHEST: [],
-                EventPriority.HIGH: [],
-                EventPriority.MEDIUM: [],
-                EventPriority.LOW: [],
-                EventPriority.LOWEST: []
+        if event_name not in self.handlers:
+            self.handlers[event_name] = {
+                EventPriority.HIGHEST.value: [],
+                EventPriority.HIGH.value: [],
+                EventPriority.MEDIUM.value: [],
+                EventPriority.LOW.value: [],
+                EventPriority.LOWEST.value: []
             }
 
-            # Trigger initial event hook registration via the queue connector
-            self.NITE.queue_connector.register_event_hook(event_name)
+        # Add the handler to the collection of handlers
+        self.handlers[event_name][priority.value].append(handler)
+        logger.debug('Registered a new event handler for "%s" with priority "%s"', event_name, priority)
 
-        # Add the listener to the collection of listeners
-        self.event_listeners[event_name][priority].append(listener)
-        logger.debug('Registered a new event listener for "%s" with priority "%s"',
-                      event_name, EventPriority.reverse_mapping[priority])
-
-    def trigger_event(self, event, demographic=EventDemographic.GLOBAL_SINGLE, reply_to_event=None):
+    def trigger(self, event, demographic=EventDemographic.GLOBAL_SINGLE, reply_to_event=None):
         """Trigger an event of type `event` against the chosen demographic.
 
         If `event` is not a dict and thus an instance of an event, it will be
@@ -116,24 +114,25 @@ class EventManager:
         if demographic is EventDemographic.LOCAL:
             self.handle_event(event_data)
         else:
-            self.NITE.queue_connector.publish_event(event_data, demographic, reply_to_event)
+            self.queue.publish(event_data, demographic, reply_to_event)
 
-    def handle_event(self, event):
+    def handle(self, event):
         """Handle the passed event."""
         event_name = event.__class__.__module__ + '.' + event.__class__.__name__
-        if event_name not in self.event_listeners:
+        if event_name not in self.handlers:
             # If this exception ever actually gets raised, something is seriously wrong.
-            raise Exception('There are no listeners registered for the event "%s"' % event_name)
+            raise Exception('There are no handlers registered for the event "%s"' % event_name)
 
         # Execute event listeners in descending priority.
-        for priority, listeners in self.event_listeners[event_name].items():
-            for listener in listeners:
-                listener(event)
+        for priority, handlers in self.handlers[event_name].items():
+            for handler in handlers:
+                handler(event)
 
-    def __init__(self, NITE):
+        return True
+
+    def __init__(self):
         """Initialize the event manager."""
-        self._NITE = NITE
-        self._event_listeners = {}
+        self.handlers = {}
         logger.debug('Event manager initialized')
 
 

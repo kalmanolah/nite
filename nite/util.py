@@ -12,12 +12,12 @@ def get_module_attr(module_name, attr_name):
     return getattr(module_, attr_name)
 
 
-def instantiate(module_name, class_name, *args):
+def instantiate(module_name, class_name, *args, **kwargs):
     """Instantiate and return a class in an (un)imported module with arguments."""
     # Grab the class from the module
     class_ = get_module_attr(module_name, class_name)
     # Instantiate the class with our args and return the instance
-    return class_(*args)
+    return class_(*args, **kwargs)
 
 
 def ensure_dir(dir_name):
@@ -32,25 +32,6 @@ def ensure_dir(dir_name):
         if err.errno != errno.EEXIST:
             raise
     return
-
-
-def set_working_directory():
-    """Set the current working directory to the root of the application."""
-    os.chdir(os.path.realpath(__file__).replace('nite/util.py', ''))
-
-
-def enum(*sequential, **named):
-    """Enum support for python < 3.4. Construct and return an enum.
-
-    Taken from http://stackoverflow.com/a/1695250.
-
-    """
-    enums = dict(zip(sequential, range(len(sequential))), **named)
-
-    reverse = dict((value, key) for key, value in enums.items())
-    enums['reverse_mapping'] = reverse
-
-    return type('Enum', (), enums)
 
 
 def ignore_signals():
