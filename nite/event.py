@@ -112,7 +112,7 @@ class EventManager:
         event_data = event if isinstance(event, dict) else event.dump()
 
         if demographic is EventDemographic.LOCAL:
-            self.handle_event(event_data)
+            self.handle(event_data)
         else:
             self.queue.publish(event_data, demographic, reply_to_event)
 

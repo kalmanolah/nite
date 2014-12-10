@@ -139,8 +139,9 @@ class NITECore:
 
         logger.info('Started successfully')
 
-        # Take commands from STDIN
-        self.command_loop()
+        # Run until we have to stop
+        while not self.options['stopping']:
+            time.sleep(0.1)
 
     def stop(self):
         """Stop NITE."""
@@ -152,29 +153,6 @@ class NITECore:
         self.modules.stop()
 
         logger.info('Stopped successfully')
-
-    def command_loop(self):
-        """Loop for accepting commands from standard input."""
-        from nite.command import CommandEvent
-
-        while not self.options['stopping']:
-            has_input = False
-
-            try:
-                has_input, _, _ = select([sys.stdin], [], [], 1)
-            except InterruptedError:  # noqa
-                pass
-
-            line = None
-            if has_input:
-                line = sys.stdin.readline().rstrip()
-
-            if not line:
-                continue
-
-            # Create a new command event and have it handled
-            command_event = CommandEvent(line)
-            self.events.handle(command_event)
 
     def daemonize_process(self):
         """Daemonizes.

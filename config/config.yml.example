@@ -1,7 +1,5 @@
 nite:
-    # Uncomment the block below to modify logging configuration
-    # See https://docs.python.org/3/library/logging.config.html#dictionary-schema-details
-    logging:
+    # logging: # See https://docs.python.org/3/library/logging.config.html#dictionary-schema-details
     #     version: 1
     #     disable_existing_loggers: false
     #     formatters:
@@ -27,10 +25,13 @@ nite:
     #     root:
     #         level: INFO
     #         handlers: [console, file]
-    event:
-        #worker_processes: <CPUS>
-    queue:
-        #type:             amqp
-        #node_identifier:  <FQDN>
-        amqp:
-            #connect_timeout:  5
+    # event:
+    #     worker_processes: 8 # Defaults to CPU count
+    # queue:
+    #     type: amqp
+    #     node_identifier: my.box # Defaults to FQDN
+    #     amqp:
+    #         connect_timeout:  5
+    # command:
+    #     bind_address: /tmp/nite.sock # If the format 0.0.0.0:1234 is passed, a TCP socket will be bound to
+    #     listen_backlog: 5
