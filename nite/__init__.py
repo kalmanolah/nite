@@ -6,6 +6,7 @@ import signal
 import sys
 import errno
 import time
+import threading
 from logging import getLogger
 from select import select
 from ballercfg import ConfigurationManager
@@ -103,10 +104,20 @@ class NITECore:
         """Set the worker manager."""
         self._workers = value
 
+    @property
+    def terminate(self):
+        """Return termination event."""
+        return self._terminate
+
+    @terminate.setter
+    def terminate(self, value):
+        """Set termination event."""
+        self._terminate = value
+
     def start(self):
         """Start."""
         logger.info('Attempting to start')
-        self.options['stopping'] = False
+        self.terminate = threading.Event()
 
         # Load configuration
         self.config = ConfigurationManager.load(['config/*', os.path.expanduser('~') + '/.nite/config/*',
@@ -140,13 +151,13 @@ class NITECore:
         logger.info('Started successfully')
 
         # Run until we have to stop
-        while not self.options['stopping']:
-            time.sleep(0.1)
+        while not self.terminate.is_set():
+            time.sleep(0.2)
 
     def stop(self):
         """Stop NITE."""
         logger.info('Attempting to stop')
-        self.options['stopping'] = True
+        self.terminate.set()
 
         self.queue.stop()
         self.workers.stop()
