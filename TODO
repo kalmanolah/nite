@@ -1,6 +1,5 @@
 * Proper init scripts
 * Start using [knot](https://pypi.python.org/pypi/knot/0.3.0)
-* Start using stdlogger
 * Make code slightly less horrible (this process has been ongoing for a while)
-* Automatic module loading by module name/prefix or package
+* Write a statd module?
 * Testing (yeah, right)
