@@ -13,6 +13,36 @@ It should be mentioned that this project is being worked on purely for the sake
 of hacking up something neat, and that it will probably not live up to your
 standards.
 
+##Configuring
+
+Configuration will be loaded from `./config/*`, `~/.nite/config/*` and
+`/etc/nite/config/*` by default. See [config](config) for the default
+configuration. Please keep in mind that modules can have their own
+configuration, so you should refer to module-specific documentation for details
+on configuring specific modules.
+
+##Writing modules
+
+Everything from the entry point group `nite.modules` will be loaded by default.
+To define your own module, add the following to your `setup.py`:
+
+``` python
+// setup.py
+identifier = 'my_module'
+entry_point = 'my_module:MyModuleClass'
+
+setup(
+    ...
+    entry_points={
+        'nite.modules': ['%s = %s' % (identifier, entry_point)]
+    }
+    ...
+)
+```
+
+Module classes should extend `nite.module.AbstractModule`, which can be found
+in [nite.module](nite/module.py).
+
 ##Dependencies
 
 * python3
