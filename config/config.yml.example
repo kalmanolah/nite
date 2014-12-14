@@ -32,6 +32,3 @@ nite:
     #     node_identifier: my.box # Defaults to FQDN
     #     amqp:
     #         connect_timeout:  5
-    # command:
-    #     bind_address: /tmp/nite.sock # If the format 0.0.0.0:1234 is passed, a TCP socket will be bound to
-    #     listen_backlog: 5
