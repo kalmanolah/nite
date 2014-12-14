@@ -1,9 +1,7 @@
 """Module module."""
-import glob
-import os
 import sys
 import logging
-from ballercfg import ConfigurationManager
+from pkg_resources import iter_entry_points
 
 
 logger = logging.getLogger(__name__)
@@ -18,10 +16,10 @@ class AbstractModule:
         """Return NITE."""
         return self._NITE
 
-    @property
-    def metadata(self):
-        """Return metadata."""
-        return self._metadata
+    @NITE.setter
+    def NITE(self, value):
+        """Set NITE."""
+        self._NITE = value
 
     def start(self):
         """Start the module.
@@ -39,10 +37,9 @@ class AbstractModule:
         """
         raise NotImplementedError('All derivatives of `AbstractModule` must implement a `stop` method.')
 
-    def __init__(self, NITE, metadata):
-        """Construct an instance of this module with some metadata."""
-        self._NITE = NITE
-        self._metadata = metadata
+    def __init__(self, NITE):
+        """Construct an instance of this module."""
+        self.NITE = NITE
 
 
 class ModuleManager:
@@ -69,168 +66,68 @@ class ModuleManager:
         """Set modules."""
         self._modules = value
 
-    @property
-    def module_identifiers(self):
-        """Return module identifiers."""
-        return self._module_identifiers
-
-    @module_identifiers.setter
-    def module_identifiers(self, value):
-        """Set module identifiers."""
-        self._module_identifiers = value
-
-    @property
-    def module_metadata(self):
-        """Return module metadata."""
-        return self._module_metadata
-
-    @module_metadata.setter
-    def module_metadata(self, value):
-        """Set module metadata."""
-        self._module_metadata = value
-
-    @property
-    def module_paths(self):
-        """Return module paths."""
-        return self._module_paths
-
-    @module_paths.setter
-    def module_paths(self, value):
-        """Set module paths."""
-        self._module_paths = value
-
-    @property
-    def module_modules(self):
-        """Return module modules."""
-        return self._module_modules
-
-    @module_modules.setter
-    def module_modules(self, value):
-        """Set module modules."""
-        self._module_modules = value
-
-    def refresh_module_list(self):
-        """Refresh module list and metadata."""
-        paths = ['modules/*', os.path.expanduser('~') + '/.nite/modules/*', '/etc/nite/modules/*']
-        self.module_identifiers = []
-        self.module_metadata = {}
-        self.module_paths = {}
-        dirs = []
-
-        for path in paths:
-            logger.debug('Loading modules matching "%s"', path)
-            entries = glob.glob(path)
-            for entry in entries:
-                if os.path.isdir(entry):
-                    dirs.append(entry)
-
-        for dir in dirs:
-            module_path = dir + '/module.*'
-            source_path = dir + '/src'
-
-            if not glob.glob(module_path):
-                raise IOError('No module file matching "%s" found!' % module_path)
-
-            metadata = ConfigurationManager.load(module_path)
-            identifier = metadata.get('identifier', metadata.get('name'))
-
-            self.module_identifiers.append(identifier)
-            self.module_metadata[identifier] = metadata
-            self.module_paths[identifier] = source_path
-
-    def load_single(self, module_identifier):
+    def load_single(self, identifier):
         """Load a module by its identifier."""
-        # If this module already exists in self.modules, it does not
-        # need to be loaded.
-        if module_identifier in self.modules:
-            return
+        logger.debug('Attempting to load module "%s"', identifier)
 
-        logger.debug('Loading module "%s"', module_identifier)
-        metadata = self.module_metadata[module_identifier]
+        for entry_point in iter_entry_points(group='nite.modules', name=identifier):
+            self.modules[identifier] = entry_point.load()(self.NITE)
 
-        # If the module has dependencies, try load those modules first.
-        if metadata.get('dependencies'):
-            for dependency in metadata.get('dependencies'):
-                self.load_single(dependency)
+        logger.debug('Module "%s" loaded', identifier)
 
-        # Add the module's src/ folder to python's PYTHONPATH.
-        sys.path.insert(0, '%s/%s' % (os.getcwd(), self.module_paths[module_identifier]))
-
-        # The manifest is the module and class we need to instantiate.
-        manifest = metadata.get('manifest')
-
-        # Dynamically import the correct module.
-        module = __import__(manifest[0], globals(), locals(), manifest[1])
-        self.module_modules[module_identifier] = module
-
-        # Grab the main class for the module.
-        class_ = getattr(module, manifest[1])
-
-        # Instantiate the module and pass NITE & metadata along.
-        instance = class_(self.NITE, metadata)
-        self.modules[module_identifier] = instance
-
-    def unload_single(self, module_identifier):
+    def unload_single(self, identifier):
         """Unload a module by its identifier."""
-        logger.debug('Unloading module "%s"', module_identifier)
+        logger.debug('Unloading module "%s"', identifier)
 
-        del self.modules[module_identifier]
+        # We need to remove the module from the python interpreter in order for live codebase updates to work.
+        sys.modules.pop(self.modules[identifier].__module__)
+
+        del self.modules[identifier]
         self.modules.pop("", None)
         self.modules.pop(None, None)
 
-        # We need to remove the module from the python interpreter in order for live codebase updates to work.
-        sys.modules.pop(self.module_modules[module_identifier].__name__)
-        del self.module_modules[module_identifier]
-        self.module_modules.pop("", None)
-        self.module_modules.pop(None, None)
+        logger.debug('Unloaded module "%s"', identifier)
 
     def load(self):
         """Load all modules."""
-        for module in self.module_identifiers:
-            self.load_single(module)
+        for entry_point in iter_entry_points(group='nite.modules'):
+            self.load_single(entry_point.name)
 
     def unload(self):
         """Unload all modules."""
-        for module in self.module_identifiers:
-            self.unload_single(module)
+        # We need to copy the list of identifiers, because unloading a module removed it from the modules dict
+        identifiers = list(self.modules.keys())
+        for identifier in identifiers:
+            self.unload_single(identifier)
 
-    def start_single(self, module_identifier):
+    def start_single(self, identifier):
         """Start a module by its identifier."""
-        module = self.modules[module_identifier]
+        logger.debug('Starting module "%s"', identifier)
+        self.modules[identifier].start()
+        logger.debug('Module "%s" started', identifier)
 
-        logger.debug('Starting module "%s"', module_identifier)
-        module.start()
-        logger.debug('Module "%s" started', module_identifier)
-
-    def stop_single(self, module_identifier):
+    def stop_single(self, identifier):
         """Stop a module by its identifier."""
-        module = self.modules[module_identifier]
-
-        logger.debug('Stopping module "%s"', module_identifier)
-        module.stop()
-        logger.debug('Module "%s" stopped', module_identifier)
+        logger.debug('Stopping module "%s"', identifier)
+        self.modules[identifier].stop()
+        logger.debug('Module "%s" stopped', identifier)
 
     def start(self):
         """Start all modules."""
         self.load()
 
-        for module in self.module_identifiers:
-            self.start_single(module)
+        for identifier in self.modules.keys():
+            self.start_single(identifier)
 
     def stop(self):
         """Stop all modules."""
-        for module in self.module_identifiers:
-            self.stop_single(module)
+        for identifier in self.modules.keys():
+            self.stop_single(identifier)
 
         self.unload()
 
     def __init__(self, NITE):
         """Constructor."""
         self.NITE = NITE
-
-        # Initialize module variables.
         self.modules = {}
-        self.module_modules = {}
-        self.refresh_module_list()
-
         logger.debug('Module manager initialized')

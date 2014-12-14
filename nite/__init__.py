@@ -8,7 +8,6 @@ import errno
 import time
 import threading
 from logging import getLogger
-from select import select
 from ballercfg import ConfigurationManager
 
 from nite.queue import create_connector
@@ -21,7 +20,7 @@ from nite.module import ModuleManager
 logger = getLogger(__name__)
 
 
-def show_version(ctx, value):
+def show_version(ctx, param, value):
     """Print version information and exit."""
     if not value:
         return
@@ -120,8 +119,11 @@ class NITECore:
         self.terminate = threading.Event()
 
         # Load configuration
-        self.config = ConfigurationManager.load(['config/*', os.path.expanduser('~') + '/.nite/config/*',
-            '/etc/nite/config/*'])
+        self.config = ConfigurationManager.load([
+            'config/*',
+            os.path.expanduser('~') + '/.nite/config/*',
+            '/etc/nite/config/*'
+        ])
 
         # Properly set up the logger using values from the configuration
         configure_logging(self.config.get('nite.logging'), debug=self.options['debug'])
@@ -131,8 +133,11 @@ class NITECore:
 
         # Initialize queue manager
         queue_type = self.config.get('nite.queue.type', 'amqp')
-        self.queue = create_connector(type=queue_type, config=self.config.get('nite.queue.%s' % queue_type),
-            events=self.events)
+        self.queue = create_connector(
+            type=queue_type,
+            config=self.config.get('nite.queue.%s' % queue_type),
+            events=self.events
+        )
 
         # Add queue manager reference to event manager
         self.events.queue = self.queue
