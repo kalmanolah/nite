@@ -289,7 +289,7 @@ class AmqpQueueConnector(AbstractQueueConnector):
 
         # ACK or NACK as needed
         tag = message.delivery_info['delivery_tag']
-        self.channel.basic_ack(delivery_tag=tag) if result else channel.basic_nack(delivery_tag=tag)
+        self.channel.basic_ack(delivery_tag=tag) if result else self.channel.basic_nack(delivery_tag=tag)
 
     def publish(self, event, demographic, reply_event):
         """Publish an event onto the queue."""
@@ -309,7 +309,7 @@ class AmqpQueueConnector(AbstractQueueConnector):
         )
 
         # Determine exchange name
-        exchange = self.config['exchange_%s' %  ('fanout' if demographic is EventDemographic.GLOBAL_ALL else 'topic')]
+        exchange = self.config['exchange_%s' % ('fanout' if demographic is EventDemographic.GLOBAL_ALL else 'topic')]
 
         # Publish the message
         self.channel.basic_publish(
@@ -334,8 +334,8 @@ class AmqpQueueConnector(AbstractQueueConnector):
             # If we got a timeout, do nothing
             pass
 
-    def __init__(self, events, exchange_fanout, exchange_topic, virtual_host, host, user, password, ssl=False,
-        connect_timeout=5):
+    def __init__(self, events, exchange_fanout, exchange_topic, virtual_host,
+                 host, user, password, ssl=False, connect_timeout=5):
         """Constructor."""
         super(self.__class__, self).__init__(events=events)
         self.config = locals()
