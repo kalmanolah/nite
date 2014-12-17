@@ -8,6 +8,7 @@ def read(fname):
     """Read and return the contents of a file."""
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
+
 setup(
     name='nite',
     version='0.0.1',
