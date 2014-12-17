@@ -1,6 +1,8 @@
 NITE, the Nigh Impervious Task Executor
 =======================================
 
+[![Build Status](https://travis-ci.org/kalmanolah/nite.svg?branch=master)](https://travis-ci.org/kalmanolah/nite)
+
 ##About
 
 NITE - the Nigh Impervious Task Executor - is a modular, event-driven remote
