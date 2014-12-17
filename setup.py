@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 """NITE Setup module."""
 from setuptools import setup, find_packages
 import os
